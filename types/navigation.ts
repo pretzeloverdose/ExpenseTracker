@@ -5,6 +5,12 @@ export type RootStackParamList = {
   Search: { eventsData: EventsData; onItemSelect?: (id: number) => void; };
   Edit: { eventsData: EventsData; selectedItem: Item; };
   Add: { eventsData: EventsData; };
+  CustomiseTheme: undefined;
+  MonthlySummary: { eventsData: EventsData; };
+  Categories: { eventsData: EventsData; };
+  Terms: undefined;
+  SecureAccess: undefined; // Screen for secure access, e.g., PIN or biometric authentication
+  
   // Add other screens here as needed
 };
 

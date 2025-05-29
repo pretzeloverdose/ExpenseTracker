@@ -15,7 +15,6 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-import WeekCalendar from './components/WeekCalendar';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { enableScreens } from 'react-native-screens';
 import { NavigationContainer } from '@react-navigation/native';
@@ -26,8 +25,12 @@ import AddScreen from './screens/AddScreen';
 import { RootStackParamList } from './types/navigation';
 import { Provider } from 'react-redux';
 import { store } from './store';
-
-enableScreens();
+import { ThemeProvider } from './context/ThemeContext';
+import CustomizeThemeScreen from './screens/CustomizeThemeScreen';
+import SummaryScreen from './screens/SummaryScreen';
+import CategoriesScreen from './screens/CategoriesScreen';
+import TermsScreen from './screens/TermsScreen';
+import SecureAccessScreen from './screens/SecureAccessScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -53,16 +56,25 @@ function App(): React.JSX.Element {
     { 'id': 6, 'description': 'item 6', 'date': '2025-05-13' },
   ]
 
+enableScreens();
+
   return (
     <Provider store={store}>
+      <ThemeProvider>
       <NavigationContainer>
         <Stack.Navigator initialRouteName='Home'>
-          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-          <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
-          <Stack.Screen name="Edit" component={EditScreen} options={{ title: 'Edit Item' }} />
-          <Stack.Screen name="Add" component={AddScreen} options={{ title: 'Add Item' }} />
+          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home', headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="Edit" component={EditScreen} options={{ title: 'Edit Item', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="Add" component={AddScreen} options={{ title: 'Add Item', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Edit Categories', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="CustomiseTheme" component={CustomizeThemeScreen} options={{ title: 'Customise Theme', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="MonthlySummary" component={SummaryScreen} options={{ title: 'Monthly Summary', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms and Conditions', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="SecureAccess" component={SecureAccessScreen} options={{ title: 'Secure Access', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
         </Stack.Navigator>
       </NavigationContainer>
+      </ThemeProvider>
     </Provider>
   );
 }
@@ -84,6 +96,11 @@ const styles = StyleSheet.create({
   highlight: {
     fontWeight: '700',
   },
+  headerTitle: {
+    color: '#000',
+    fontSize: 20,
+    fontWeight: 'semibold',
+  }
 });
 
 export default App;

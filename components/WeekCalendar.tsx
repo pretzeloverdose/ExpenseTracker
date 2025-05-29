@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { FlatList, View, Text, Dimensions, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import { FlatList, View, Text, Dimensions, StyleSheet, TouchableOpacity, Modal, Modal as RNModal, Alert } from 'react-native';
 import { 
   format, 
   startOfWeek, 
@@ -19,7 +19,7 @@ import _ from 'lodash';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CalendarPicker, { DateParsable } from 'react-native-calendar-picker';
 import { DayData, WeekData } from '../types/dates';
-import { EventsData, Item } from '../types/Item';
+import { EventsData, Item, Category, CategoryRelationship } from '../types/Item';
 import DayPanel from './DayPanel';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ItemForm from './ItemForm';
@@ -31,8 +31,10 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import loadFromStorage from '../storage';
 import { deleteItem, setAllItems, updateItem } from '../slice';
 import { confirmDelete } from '../confirm';
+import globalStyles, { createGlobalStyles } from '../styles/globalStyles';
+import { useTheme } from '../context/ThemeContext';
 
-interface Props {
+interface WeekCalendarProps {
   eventsData: EventsData;
 }
 const STORAGE_KEY = 'agendaData';
@@ -131,7 +133,7 @@ const highlightItemInCalendar = (id: number) => {
     // This could scroll to the item or change its style
   };
 
-const WeekCalendar: React.FC<Props> = ({eventsData}) => {
+const WeekCalendar: React.FC<WeekCalendarProps> = ({eventsData}) => {
     const reduxItems = useAppSelector((state) => state.items.items);
     const dispatch = useAppDispatch();
     const flatListRef = useRef<FlatList>(null);
@@ -144,8 +146,25 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
     const [menuVisible, setMenuVisible] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
     const [newItem, setNewItem] = useState(false);
-    const [data, setData] = useState<Record<string, Item[]>>({});
+    const [data, setData] = useState<Record<string, Item[]>>(eventsData || {});
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [categoryRelationships, setCategoryRelationships] = useState<CategoryRelationship[]>([]);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+    const [categoryDropdownVisible, setCategoryDropdownVisible] = useState(false);
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+
+    const { primaryColor } = useTheme();
+    const globalStyles = createGlobalStyles(primaryColor);
+
+    useEffect(() => {
+      (async () => {
+        const catRaw = await AsyncStorage.getItem('categoriesData');
+        if (catRaw) setCategories(JSON.parse(catRaw));
+        const relRaw = await AsyncStorage.getItem('categoryRelationships');
+        if (relRaw) setCategoryRelationships(JSON.parse(relRaw));
+      })();
+    }, [categoryDropdownVisible, modalVisible, editVisible]);
 
     const toggleCalendar = () => {
       setShowCalendar(!showCalendar);
@@ -158,7 +177,6 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
     };
 
     useEffect(() => {
-      console.log('here we go');
       fetchData();
     }, [dispatch]);
 
@@ -175,37 +193,58 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
     }, [data]);
 
     const expandedData = useMemo(() => {
-        const result: typeof data = { ...data };
-        let nextId = Math.max(
-          0,
-          ...Object.values(data)
-            .flat()
-            .map((item) => item.id)
-        ) + 1;
-        const endDate = addDays(new Date(), 26 * 7); // Agenda shows 26 weeks ahead
-      
-        Object.values(data).flat().forEach((item) => {
-          if (item.recurring) {
-            const start = parseISO(item.day);
-            let nextDate = item.recurInterval === -1
-              ? addMonths(start, 1)
-              : addDays(start, item.recurInterval);
-          
-            while (isBefore(nextDate, endDate)) {
-              const key = format(nextDate, 'yyyy-MM-dd');
-              const copy = { ...item, id: nextId++, day: key, recurParentId: item.id };
-              result[key] = result[key] || [];
-              result[key].push(copy);
-          
-              nextDate = item.recurInterval === -1
-                ? addMonths(nextDate, 1)
-                : addDays(nextDate, item.recurInterval);
-            }
+      // Step 1: Expand recurring items as before
+      const result: typeof data = { ...data };
+      let nextId = Math.max(
+        0,
+        ...Object.values(data)
+          .flat()
+          .map((item) => item.id)
+      ) + 1;
+      const endDate = addDays(new Date(), 26 * 7); // Agenda shows 26 weeks ahead
+
+      Object.values(data).flat().forEach((item) => {
+        if (item.recurring) {
+          const start = parseISO(item.day);
+          let nextDate = item.recurInterval === -1
+            ? addMonths(start, 1)
+            : addDays(start, item.recurInterval);
+
+          while (isBefore(nextDate, endDate)) {
+            const key = format(nextDate, 'yyyy-MM-dd');
+            const copy = { ...item, id: nextId++, day: key, recurParentId: item.id };
+            result[key] = result[key] || [];
+            result[key].push(copy);
+
+            nextDate = item.recurInterval === -1
+              ? addMonths(nextDate, 1)
+              : addDays(nextDate, item.recurInterval);
+          }
+        }
+      });
+
+      // Step 2: Filter items by selectedCategoryIds if any are selected
+      if (selectedCategoryIds.length > 0) {
+        // Find all itemIds that match any selected category
+        const allowedItemIds = new Set(
+          categoryRelationships
+            .filter(rel => selectedCategoryIds.includes(rel.categoryId))
+            .map(rel => rel.itemId)
+        );
+        // Filter each day's items
+        const filteredResult: typeof data = {};
+        Object.entries(result).forEach(([day, items]) => {
+          const filteredItems = items.filter(item => allowedItemIds.has(item.id) || allowedItemIds.has(item.recurParentId));
+          if (filteredItems.length > 0) {
+            filteredResult[day] = filteredItems;
           }
         });
-        console.log('mutated: ' + result);
-        return result;
-      }, [data]);
+        return filteredResult;
+      }
+
+      // If no filter, return all
+      return result;
+    }, [data, categories, categoryRelationships, selectedCategoryIds]);
 
     const onDateChange = (date: Date) => {
       setSelectedDate(date);
@@ -264,8 +303,8 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
     }, []);
 
     const renderItem = ({ item }: { item: WeekData }) => (
-      <View style={styles.weekContainer}>
-        <View style={styles.dayPanelWrapper}>
+      <View style={globalStyles.weekContainer}>
+        <View style={globalStyles.dayPanelWrapper}>
         <DayPanel weekData={item} selectedDateIn={selectedDate} dataIn={expandedData} onDayPress={handleDayPress} />
         </View>
       </View>
@@ -277,7 +316,17 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
     };
 
     const selectedDayString = format(selectedDate?.toString(), 'yyyy-MM-dd');
-    const itemsForDay = expandedData[selectedDayString] || [];
+    const itemsForDay = useMemo(() => {
+      const allItems = expandedData[selectedDayString] || [];
+      if (!selectedCategoryIds.length) return allItems;
+      // Find item ids that have any of the selected categories
+      const itemIds = categoryRelationships
+        .filter(rel => selectedCategoryIds.includes(rel.categoryId))
+        .map(rel => rel.itemId);
+        console.log('catids', selectedCategoryIds);
+        console.log(allItems.filter(item => itemIds.includes(item.id)));
+      return allItems.filter(item => itemIds.includes(item.id));
+    }, [expandedData, selectedDayString, selectedCategoryIds, categoryRelationships]);
 
   const confirmDeleteClick = async(item: Item) => {
     const confirmed = await confirmDelete();
@@ -357,13 +406,135 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
   }
 
   return (
-    <View style={styles.AppWrap}>
+    <View style={globalStyles.AppWrap}>
+<View style={{ flexDirection: 'row', alignItems: 'center', margin: 10 }}>
+  <Text style={{ marginRight: 8, marginLeft: 25 }}>Filter by Category:</Text>
+  <TouchableOpacity
+    style={{
+      borderWidth: 1,
+      borderColor: '#1a4060',
+      borderRadius: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      backgroundColor: '#fff',
+      marginRight: 10,
+      minWidth: 120,
+    }}
+    onPress={() => setCategoryDropdownVisible(true)}
+  >
+   <Text style={{ color: '#1a4060' }}>
+  {selectedCategoryIds.length === 0
+    ? 'All'
+    : categories
+        .filter(cat => selectedCategoryIds.includes(cat.id))
+        .map((cat, index) => index === 0 ? cat.name : '...')
+        .slice(0, 2)
+        .join(' ')}
+</Text>
+  </TouchableOpacity>
+  {/* Multi-select dropdown modal */}
+  <RNModal
+    visible={categoryDropdownVisible}
+    transparent
+    animationType="fade"
+    onRequestClose={() => setCategoryDropdownVisible(false)}
+  >
+    <TouchableOpacity
+      style={{
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+      activeOpacity={1}
+      onPressOut={() => setCategoryDropdownVisible(false)}
+    >
+      <View
+        style={{
+          backgroundColor: '#fff',
+          borderRadius: 8,
+          padding: 16,
+          minWidth: 220,
+          elevation: 4,
+        }}
+      >
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 10,
+          }}
+          onPress={() => {
+            setSelectedCategoryIds([]);
+            setCategoryDropdownVisible(false);
+          }}
+        >
+          <View
+            style={{
+              width: 20,
+              height: 20,
+              borderWidth: 1,
+              borderColor: '#1a4060',
+              backgroundColor: selectedCategoryIds.length === 0 ? '#1a4060' : '#fff',
+              marginRight: 8,
+              borderRadius: 3,
+            }}
+          />
+          <Text style={{ color: '#1a4060' }}>All</Text>
+        </TouchableOpacity>
+        {categories.map(cat => (
+          <TouchableOpacity
+            key={cat.id}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: 10,
+            }}
+            onPress={() => {
+              setSelectedCategoryIds(prev =>
+                prev.includes(cat.id)
+                  ? prev.filter(id => id !== cat.id)
+                  : [...prev, cat.id]
+              );
+            }}
+          >
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderWidth: 1,
+                borderColor: '#1a4060',
+                backgroundColor: selectedCategoryIds.includes(cat.id) ? '#1a4060' : '#fff',
+                marginRight: 8,
+                borderRadius: 3,
+              }}
+            />
+            <Text style={{ color: '#1a4060' }}>{cat.name}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity
+          style={{
+            marginTop: 10,
+            alignSelf: 'flex-end',
+            paddingHorizontal: 16,
+            paddingVertical: 6,
+            backgroundColor: '#1a4060',
+            borderRadius: 5,
+          }}
+          onPress={() => setCategoryDropdownVisible(false)}
+        >
+          <Text style={{ color: '#fff' }}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  </RNModal>
+</View>
       {menuVisible && (
         <Modal visible={menuVisible} transparent={true} animationType='slide'>
           <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 }}>
             <View style={{ flex: 1, backgroundColor: 'white', padding: 20, margin: 20, borderRadius: 15 }}>
               <MenuComponent eventsData={expandedData} onItemHighlight={highlightItemInCalendar}  />
-              <TouchableOpacity onPress={closeMenu} style={[styles.closeButton, { marginTop: 10 }]}>
+              <TouchableOpacity onPress={closeMenu} style={[globalStyles.closeButton, { marginTop: 10 }]}>
               <Text style={ { color: '#fff' } }><Icon name='close' /> Close</Text></TouchableOpacity>
             </View>
           </View>
@@ -398,15 +569,15 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
       renderItem={renderItem}
     />
       
-    <View style={styles.navigation}>
-        <TouchableOpacity style={[styles.navigationBtn, styles.iconButton]} onPress={showMenu}>
-          <Icon name="menu" size={18} color="#fff" /><Text style={styles.whiteText}> Menu</Text>
+    <View style={globalStyles.navigation}>
+        <TouchableOpacity style={[globalStyles.navigationBtn]} onPress={showMenu}>
+          <Icon name="menu" size={18} color="#fff" style={globalStyles.iconButton} /><Text style={[ globalStyles.whiteText]}> Menu</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={toggleCalendar} style={[styles.navigationBtn, styles.iconButton]}>
-          <Icon name="calendar-today" size={18} color="#fff" /><Text style={styles.whiteText}> Navigate</Text>
+        <TouchableOpacity onPress={toggleCalendar} style={[globalStyles.navigationBtn, globalStyles.iconButton]}>
+          <Icon name="calendar-today" size={18} color="#fff" /><Text style={globalStyles.whiteText}> Navigate</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navigationBtn, styles.iconButton]} onPress={() => { navigation.navigate('Add',  { eventsData })}}>
-          <Icon name="add" size={18} color="#fff" /><Text style={styles.navText}> Add Item</Text>
+        <TouchableOpacity style={[globalStyles.navigationBtn, globalStyles.iconButton]} onPress={() => { navigation.navigate('Add',  { eventsData })}}>
+          <Icon name="add" size={18} color="#fff" /><Text style={globalStyles.navText}> Add Item</Text>
         </TouchableOpacity>
     </View>
     <Modal
@@ -415,14 +586,14 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
         animationType="slide"
         onRequestClose={toggleCalendar}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.calendarContainer}>
+        <View style={globalStyles.modalOverlay}>
+          <View style={globalStyles.calendarContainer}>
             <CalendarPicker
               onDateChange={onDateChange}
               minDate={START_DATE}
               maxDate={END_DATE}
               selectedStartDate={selectedDate}
-              selectedDayStyle={styles.selectedCalStyle}
+              selectedDayStyle={globalStyles.selectedCalStyle}
               selectedDayTextColor='#fff'
               width={300}
               height={400}
@@ -430,9 +601,9 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
             />
             <TouchableOpacity
               onPress={toggleCalendar}
-              style={styles.closeButton}
+              style={globalStyles.closeButton}
             >
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={globalStyles.closeButtonText}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -440,7 +611,7 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
       <Modal visible={modalVisible} transparent={true} animationType="slide">
         <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: '#ccc', padding: 20, margin: 20, borderRadius: 16 }}>
-            <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.closeButton, { marginTop: 0}]}>
+            <TouchableOpacity onPress={() => setModalVisible(false)} style={[globalStyles.closeButton, { marginTop: 0}]}>
                 <Text style={ { color: '#fff' } }><Icon name='close' /> Close</Text>
             </TouchableOpacity>
             <Text style={{width: 150, marginBottom: 15}}>Details for {selectedDayString}</Text>
@@ -474,110 +645,5 @@ const WeekCalendar: React.FC<Props> = ({eventsData}) => {
   );
 };
 
-const styles = StyleSheet.create({
-    AppWrap: {
-        height: SCREEN_HEIGHT
-    },
-    selectedCalStyle: {
-      backgroundColor: '#1a4060'
-    },
-    spaceBEtween: {
-      justifyContent: 'space-between'
-    },
-    navigation: {
-        padding: 25,
-        paddingBottom: 80,
-        display: 'flex',
-        flexWrap: 'nowrap',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    navigationBtn: {
-        padding: 12,
-        backgroundColor: '#1a4060',
-        borderRadius: 5,
-        marginRight: 6,
-        marginLeft: 6,
-        margin: 0
-    },
-    navText: {
-        color: '#fff'
-    },
-    whiteText: {
-        color: '#fff'
-    },
-  weekContainer: {
-    flex: 1,
-    width: SCREEN_WIDTH,
-    backgroundColor: '#1a4060',
-    padding: 16
-  },
-  daysContainer: {
-    margin: 6,
-    marginTop: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between'
-  },
-  dayContainer: {
-    alignItems: 'center',
-    padding: 4
-  },
-  dayPanelWrapper: {
-    flex: 1, // Makes DayPanel fill remaining space
-  },
-  dayName: {
-    fontSize: 12,
-    color: '#444',
-  },
-  dayNumber: {
-    fontSize: 12,
-    color: '#444',
-    fontWeight: '500'
-  },
-  iconButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#1a4060',
-    borderRadius: 8,
-    color: '#fff'
-  },
-  dateText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#fff'
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  calendarContainer: {
-    backgroundColor: 'white',
-    borderRadius: 5,
-    padding: 10,
-    width: '90%',
-    maxWidth: 500,
-  },
-  closeButton: {
-    marginTop: 15,
-    padding: 10,
-    backgroundColor: '#1a4060',
-    borderRadius: 5,
-    alignSelf: 'flex-end',
-  },
-  closeButtonText: {
-    fontSize: 12,
-    color: '#fff'
-  },
-  dateContainer: {
-    alignItems: 'center',
-},
-  dotsContainer: { flexDirection: "row", marginTop: 4 },
-  dot: { width: 6, height: 6, borderRadius: 3, marginHorizontal: 2 },
-}
-);
 
 export default WeekCalendar;
