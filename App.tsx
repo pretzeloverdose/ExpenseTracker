@@ -8,6 +8,7 @@
 import React, { useEffect } from 'react';
 import type {PropsWithChildren} from 'react';
 import {
+  Alert,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -61,7 +62,10 @@ function App(): React.JSX.Element {
 
 enableScreens();
 
+
+
 useEffect(() => {
+
     // Prompt for notification permission on Android 13+ and iOS
     async function requestNotificationPermission() {
       const settings = await notifee.requestPermission();
@@ -78,19 +82,6 @@ useEffect(() => {
       }
     }
     requestNotificationPermission();
-
-    // Notifee foreground event handler
-    return notifee.onForegroundEvent(async ({ type, detail }) => {
-      if (type === EventType.DELIVERED || type === EventType.PRESS) {
-        const enabled = await AsyncStorage.getItem('notificationsEnabled');
-        if (!enabled && enabled !== 'true') {
-          // Cancel the notification immediately
-          if (detail.notification?.id) {
-            await notifee.cancelNotification(detail.notification.id);
-          }
-        }
-      }
-    });
   }, []);
 
   return (

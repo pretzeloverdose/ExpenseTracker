@@ -100,10 +100,13 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
           const trigger: TimestampTrigger = {
             type: TriggerType.TIMESTAMP,
             timestamp: notificationTime.getTime(),
+            alarmManager: {
+              allowWhileIdle: true,
+            },
           };
           console.log(`Creating notification for ${item.name} at ${notificationTime.toString()} sourced from ${baseDate.toISOString()}, the time is ${now.toISOString()}`);
           // Create a trigger notification
-          await notifee.createTriggerNotification(
+          const create = await notifee.createTriggerNotification(
             {
               title: item.name,
               body: item.color === 'green' ? `Income: $${item.amount} at ${item.day} ${item.time}` : `Expense: ${item.amount} at ${item.day} ${item.time}`,
@@ -113,6 +116,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
             },
             trigger,
           );
+          console.log('Notification created:', create);
         }
         if (!item.recurring) {
           // If not recurring, break after the first notification

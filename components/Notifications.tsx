@@ -26,7 +26,6 @@ const Notifications: React.FC<NotificationsComponentProps> = ({ eventsData }) =>
   const reduxItems = useAppSelector((state) => state.items.items);
   const dispatch = useAppDispatch();
     const [data, setData] = useState<Item[]>([]);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const { primaryColor } = useTheme();
     const globalStyles = createGlobalStyles(primaryColor);
       const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -57,20 +56,6 @@ const Notifications: React.FC<NotificationsComponentProps> = ({ eventsData }) =>
   console.log('Sorted data:', sorted);
 }, [reduxItems]);
 
-// Load the setting on mount
-  useEffect(() => {
-    (async () => {
-      const stored = await AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY);
-      if (stored !== null) setNotificationsEnabled(stored === 'true');
-    })();
-  }, []);
-
-  // Save the setting when it changes
-  const handleToggle = async (value: boolean) => {
-    setNotificationsEnabled(value);
-    await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, value.toString());
-  };
-
   const filtered = data.filter(item =>
     item.notificationEnabled == true
   );
@@ -83,13 +68,6 @@ const Notifications: React.FC<NotificationsComponentProps> = ({ eventsData }) =>
     return (
         <GestureHandlerRootView style={{flex: 1 }}>
         <View style={globalStyles.container}>
-            <Text style={globalStyles.title}>
-                <Switch
-                    value={notificationsEnabled}
-                    onValueChange={handleToggle}
-                    thumbColor={notificationsEnabled ? 'green' : 'gray'}
-                    trackColor={{ false: '#ccc', true: '#a5d6a7' }}
-                  /> Notifications Enabled</Text>
     <FlatList
         data={filtered}
         keyExtractor={item => item.id.toString()}
