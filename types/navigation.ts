@@ -3,6 +3,7 @@ import { EventsData, Item } from "./Item";
 export type RootStackParamList = {
   Home: { eventsData: EventsData; };
   Search: { eventsData: EventsData; onItemSelect?: (id: number) => void; };
+  Notifications: { eventsData: EventsData; };
   Edit: { eventsData: EventsData; selectedItem: Item; };
   Add: { eventsData: EventsData; };
   CustomiseTheme: undefined;

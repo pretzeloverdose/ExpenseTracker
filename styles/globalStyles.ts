@@ -151,6 +151,9 @@ export const createGlobalStyles = (primaryColor: string) =>
       fontWeight: 'bold',
       marginBottom: 30,
     },
+    title: {
+      fontSize: 16
+    },
     screenButton: {
       backgroundColor: '#007bff',
       padding: 15,

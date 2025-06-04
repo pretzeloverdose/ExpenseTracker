@@ -11,9 +11,24 @@ export interface Item {
     recurSetDays: boolean;
     recurParentId: number;
     notificationEnabled: boolean;
-    notificationTime?: string;
+    notificationTimeOffset?: string;
   }
   
+export interface Category {
+    id: number;
+    name: string;
+}
+
+export interface CategoryRelationship {
+    id: number;
+    itemId: number;
+    categoryId: number;
+}
+export type ItemWithCategory = Item & {
+    categories: Category[];
+    itemId: number;
+} 
+
   export type EventsData = {
     [date: string]: Item[];
   }

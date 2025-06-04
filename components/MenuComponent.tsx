@@ -39,6 +39,7 @@ const MenuComponent: React.FC<MenuComponentProps> = ({ eventsData, onItemHighlig
 </TouchableOpacity>
 
 <TouchableOpacity 
+  onPress={() => navigation.navigate('Notifications', { eventsData })}
   style={[globalStyles.menuNavigationBtn, { flexDirection: 'row', alignItems: 'center' }]}>
   <MaterialIcons name="notifications" size={20} color="white" style={{ marginRight: 10 }} />
   <Text style={[globalStyles.whiteText]}>Notifications</Text>

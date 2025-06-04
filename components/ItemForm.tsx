@@ -9,6 +9,8 @@ import { Picker } from '@react-native-picker/picker';
 import { set } from 'lodash';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Category, CategoryRelationship } from '../types/Item';
+import notifee, { TimestampTrigger, TriggerType } from '@notifee/react-native';
+
 
 
 interface ItemFormProps {
@@ -26,15 +28,16 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
   const [timeHour, setTimeHour] = useState(parseInt(editItem?.time?.split(':')[0] || '00'));
   const [timeMinute, setTimeMinute] = useState(parseInt(editItem?.time?.split(':')[1] || '00'));
   const [recurring, setRecurring] = useState(editItem?.recurring || false);
-  const [recurInterval, setRecurInterval] = useState(editItem?.recurInterval?.toString() || '');
+  const [recurInterval, setRecurInterval] = useState(editItem?.recurInterval?.toString() || '0');
   const [recurSetDays, setRecurSetDays] = useState(editItem?.recurSetDays || false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [notifificationEnabled, setNotificationEnabled] = useState(editItem?.notificationEnabled || false);
-  const [notificationTime, setNotificationTime] = useState(editItem?.notificationTime || '');
-  const [notificationHour, setNotificationHour] = useState(0);
-  const [notificationMinute, setNotificationMinute] = useState(0);
+  const [notificationTime, setNotificationTime] = useState(editItem?.notificationTimeOffset || '00:00');
+  const [notificationHour, setNotificationHour] = useState(parseInt(editItem?.notificationTimeOffset?.split(':')[0] || '00'));
+  const [notificationMinute, setNotificationMinute] = useState(parseInt(editItem?.notificationTimeOffset?.split(':')[1] || '00'));
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  
 
   // Load categories and relationships on mount or when editing
   useEffect(() => {
@@ -70,9 +73,56 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
       recurInterval: parseInt(recurInterval),
       recurSetDays,
       recurParentId: 0,
-      notificationEnabled: false,
-      notificationTime: undefined,
+      notificationEnabled: notifificationEnabled,
+      notificationTimeOffset: notificationHour.toString().padStart(2, '0') + ':' + notificationMinute.toString().padStart(2, '0'),
     };
+    try {
+    if (notifificationEnabled) {
+      const [offsetHours, offsetMinutes] = (item.notificationTimeOffset ?? "00:00").split(':').map(Number);
+      const now = new Date();
+      const baseDate  = new Date(item.day + 'T' + item.time + ':00');
+      const utcISOString = baseDate.toISOString();
+
+      let notificationTime = new Date(
+        new Date(utcISOString).getTime() - (offsetHours * 60 + offsetMinutes) * 60000
+      );
+      // allow for up to 12 triggers to be created
+      for (let i = 0; i <= 12; i++) {
+        // Create a time-based trigger
+        switch (recurInterval) {
+          default:
+            notificationTime = new Date(notificationTime.getTime() + (parseInt(recurInterval)*i) * 24 * 60 * 60 * 1000);
+          case '-1': // Monthly
+            notificationTime = new Date(notificationTime.getFullYear(), notificationTime.getMonth() + (1*i), notificationTime.getDate(), notificationTime.getHours(), notificationTime.getMinutes());
+            break;
+        }
+        if (notificationTime > now) {
+          const trigger: TimestampTrigger = {
+            type: TriggerType.TIMESTAMP,
+            timestamp: notificationTime.getTime(),
+          };
+          console.log(`Creating notification for ${item.name} at ${notificationTime.toString()} sourced from ${baseDate.toISOString()}, the time is ${now.toISOString()}`);
+          // Create a trigger notification
+          await notifee.createTriggerNotification(
+            {
+              title: item.name,
+              body: item.color === 'green' ? `Income: $${item.amount} at ${item.day} ${item.time}` : `Expense: ${item.amount} at ${item.day} ${item.time}`,
+              android: {
+                channelId: 'your-channel-id',
+              },
+            },
+            trigger,
+          );
+        }
+        if (!item.recurring) {
+          // If not recurring, break after the first notification
+          break;
+        }
+      }
+    }
+  } catch (error) {
+      console.error('Error creating notification:', error);
+  }
 
     onSave(item);
     await saveCategoryRelationships(item.id, selectedCategoryIds);
@@ -175,7 +225,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
         )}
       </View>
 
-      <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', marginBottom: 6, alignItems: 'center' }}>
       <Text>Time: </Text>
             {/* Hour Picker */}
             <Picker
@@ -206,7 +256,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
       {recurring && (
         <View>
           <Text>Recurring every  {`\n`}</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 32, alignItems: 'baseline', flexWrap: 'wrap' }}>
+          <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'baseline', flexWrap: 'wrap' }}>
           <TouchableOpacity onPress={() => { setRecurInterval('7'); setRecurSetDays(false) }}>
             <Text style={{ color: recurInterval === '7' ? 'green' : 'grey', marginRight: 5 }}>
               ● Week
@@ -283,8 +333,36 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
           />
         </View>
         {notifificationEnabled && (
+          <View>
+            <Text style={{ marginRight: 10 }}>Time Before Event:</Text>
           <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
-            
+            {/* Hour Picker */}
+            <Picker
+              selectedValue={parseInt(notificationHour.toString() || '00')}
+              style={{ height: 50, width: 90 }}
+              onValueChange={(hour) => {
+                setNotificationHour(hour);
+              }}
+            >
+              {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
+                <Picker.Item key={hour} label={`${hour}`} value={hour} style={{fontSize: 14}} />
+              ))}
+            </Picker>
+              <Text>hrs </Text>
+            {/* Minute Picker */}
+            <Picker
+              selectedValue={parseInt(notificationMinute.toString() || '00')}
+              style={{ height: 50, width: 100 }}
+              onValueChange={(minute) => {
+                setNotificationMinute(minute);
+              }}
+            >
+              {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
+                <Picker.Item key={minute} label={`${minute}`} value={minute} style={{fontSize: 14}} />
+              ))}
+            </Picker>
+            <Text>mins</Text>
+          </View>
           </View>
         )}
       </View>

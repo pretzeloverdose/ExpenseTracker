@@ -5,7 +5,7 @@
  * @format
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import type {PropsWithChildren} from 'react';
 import {
   ScrollView,
@@ -20,6 +20,7 @@ import { enableScreens } from 'react-native-screens';
 import { NavigationContainer } from '@react-navigation/native';
 import HomeScreen from './screens/HomeScreen';
 import SearchScreen from './screens/SearchScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
 import EditScreen from './screens/EditScreen';
 import AddScreen from './screens/AddScreen';
 import { RootStackParamList } from './types/navigation';
@@ -31,6 +32,8 @@ import SummaryScreen from './screens/SummaryScreen';
 import CategoriesScreen from './screens/CategoriesScreen';
 import TermsScreen from './screens/TermsScreen';
 import SecureAccessScreen from './screens/SecureAccessScreen';
+import notifee, { EventType, AndroidImportance } from '@notifee/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -58,6 +61,38 @@ function App(): React.JSX.Element {
 
 enableScreens();
 
+useEffect(() => {
+    // Prompt for notification permission on Android 13+ and iOS
+    async function requestNotificationPermission() {
+      const settings = await notifee.requestPermission();
+      if (settings.authorizationStatus >= 1) {
+        // Permission granted, create channel if needed
+        await notifee.createChannel({
+          id: 'your-channel-id',
+          name: 'Default Channel',
+          importance: AndroidImportance.HIGH,
+        });
+      } else {
+        // Permission denied
+        console.log('Notification permission denied');
+      }
+    }
+    requestNotificationPermission();
+
+    // Notifee foreground event handler
+    return notifee.onForegroundEvent(async ({ type, detail }) => {
+      if (type === EventType.DELIVERED || type === EventType.PRESS) {
+        const enabled = await AsyncStorage.getItem('notificationsEnabled');
+        if (!enabled && enabled !== 'true') {
+          // Cancel the notification immediately
+          if (detail.notification?.id) {
+            await notifee.cancelNotification(detail.notification.id);
+          }
+        }
+      }
+    });
+  }, []);
+
   return (
     <Provider store={store}>
       <ThemeProvider>
@@ -65,6 +100,7 @@ enableScreens();
         <Stack.Navigator initialRouteName='Home'>
           <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home', headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
           <Stack.Screen name="Edit" component={EditScreen} options={{ title: 'Edit Item', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
           <Stack.Screen name="Add" component={AddScreen} options={{ title: 'Add Item', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
           <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Edit Categories', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
