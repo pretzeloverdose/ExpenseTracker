@@ -242,27 +242,6 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
         </View>
       </View>
       )}
-      <View>
-        <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
-          <Text style={{ marginRight: 10 }}>Notification:</Text>
-          <Switch
-            value={notifificationEnabled}
-            onValueChange={setNotificationEnabled}
-            thumbColor={notifificationEnabled ? 'green' : 'gray'}
-            trackColor={{ false: '#ccc', true: '#a5d6a7' }}
-          />
-        </View>
-        {notifificationEnabled && (
-          <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
-            
-          </View>
-        )}
-      </View>
-      <View style={{ marginTop: 0 }}>
-        <Button title={editItem ? 'Update' : 'Add'} onPress={handleSubmit} />
-        <View style={{ height: 10 }} />
-        <Button title="Cancel" onPress={onCancel} color="gray" />
-      </View>
 
       {/* Multi-select UI for Categories */}
       <View style={{ marginVertical: 10 }}>
@@ -292,6 +271,27 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
             <Text>{cat.name}</Text>
           </TouchableOpacity>
         ))}
+      </View>
+      <View>
+        <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
+          <Text style={{ marginRight: 10 }}>Notification:</Text>
+          <Switch
+            value={notifificationEnabled}
+            onValueChange={setNotificationEnabled}
+            thumbColor={notifificationEnabled ? 'green' : 'gray'}
+            trackColor={{ false: '#ccc', true: '#a5d6a7' }}
+          />
+        </View>
+        {notifificationEnabled && (
+          <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
+            
+          </View>
+        )}
+      </View>
+      <View style={{ marginTop: 0 }}>
+        <Button title={editItem ? 'Update' : 'Add'} onPress={handleSubmit} />
+        <View style={{ height: 10 }} />
+        <Button title="Cancel" onPress={onCancel} color="gray" />
       </View>
     </ScrollView>
     </GestureHandlerRootView>

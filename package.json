@@ -1,6 +1,6 @@
 {
-  "name": "ExpenseTrackerDevelopment",
-  "displayName": "Expense Tracker Development",
+  "name": "ExpenseTracker",
+  "displayName": "Expense Tracker",
   "version": "0.0.1",
   "private": true,
   "scripts": {
