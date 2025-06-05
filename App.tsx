@@ -5,16 +5,18 @@
  * @format
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import type {PropsWithChildren} from 'react';
 import {
   Alert,
+  Modal,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   useColorScheme,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { enableScreens } from 'react-native-screens';
@@ -35,11 +37,11 @@ import TermsScreen from './screens/TermsScreen';
 import SecureAccessScreen from './screens/SecureAccessScreen';
 import notifee, { EventType, AndroidImportance } from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Auth from './components/Auth';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function App(): React.JSX.Element {
-
   /*
    * To keep the template simple and small we're adding padding to prevent view
    * from rendering under the System UI.
@@ -60,11 +62,24 @@ function App(): React.JSX.Element {
     { 'id': 6, 'description': 'item 6', 'date': '2025-05-13' },
   ]
 
-enableScreens();
+  enableScreens();
 
+  const [authRequired, setAuthRequired] = useState<boolean | null>(null);
 
+  useEffect(() => {
+    (async () => {
+      const method = await AsyncStorage.getItem('authMethod');
+      if (method === 'pin' || method === 'fingerprint') {
+        setAuthRequired(true);
+      } else {
+        setAuthRequired(false);
+      }
+    })();
+  }, []);
 
-useEffect(() => {
+  const handleAuthSuccess = () => setAuthRequired(false);
+
+  useEffect(() => {
 
     // Prompt for notification permission on Android 13+ and iOS
     async function requestNotificationPermission() {
@@ -84,23 +99,39 @@ useEffect(() => {
     requestNotificationPermission();
   }, []);
 
+  if (authRequired === null) {
+    // Still loading
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   return (
     <Provider store={store}>
       <ThemeProvider>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName='Home'>
-          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home', headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="Edit" component={EditScreen} options={{ title: 'Edit Item', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="Add" component={AddScreen} options={{ title: 'Add Item', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Edit Categories', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="CustomiseTheme" component={CustomizeThemeScreen} options={{ title: 'Customise Theme', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="MonthlySummary" component={SummaryScreen} options={{ title: 'Monthly Summary', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms and Conditions', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-          <Stack.Screen name="SecureAccess" component={SecureAccessScreen} options={{ title: 'Secure Access', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
-        </Stack.Navigator>
-      </NavigationContainer>
+        {/* Show Auth modal if authentication is required */}
+        <Modal visible={authRequired} animationType="slide" transparent={false}>
+          <Auth onAuthSuccess={handleAuthSuccess} forceAuth />
+        </Modal>
+        {/* Main app UI */}
+        {!authRequired && (
+          <NavigationContainer>
+            <Stack.Navigator initialRouteName='Home'>
+              <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home', headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="Edit" component={EditScreen} options={{ title: 'Edit Item', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="Add" component={AddScreen} options={{ title: 'Add Item', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Edit Categories', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="CustomiseTheme" component={CustomizeThemeScreen} options={{ title: 'Customise Theme', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="MonthlySummary" component={SummaryScreen} options={{ title: 'Monthly Summary', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms and Conditions', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+              <Stack.Screen name="SecureAccess" component={SecureAccessScreen} options={{ title: 'Secure Access', headerBackVisible: true, headerLeft: () => <View style={{ width: 20 }} />, headerTitleStyle: styles.headerTitle }} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        )}
       </ThemeProvider>
     </Provider>
   );
