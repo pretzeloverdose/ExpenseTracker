@@ -98,8 +98,8 @@ const Search: React.FC<SearchComponentProps> = ({ eventsData }) => {
         value={query}
         onChangeText={setQuery}
       />
-      <TouchableOpacity onPress={() => navigation.navigate('Add', {eventsData})} style={[globalStyles.navigationBtn, globalStyles.iconButton]}>
-        <Icon name="add" size={18} color="#fff" /><Text style={globalStyles.navText}> Add Item</Text>
+      <TouchableOpacity onPress={() => navigation.navigate('Add', {eventsData})} style={[globalStyles.navigationBtn, globalStyles.iconButton, { flex: 1, marginLeft: 10, padding: 10 }]}>
+        <Icon name="add" size={18} color="#fff" /><Text style={[globalStyles.navText]}> Add </Text>
       </TouchableOpacity>
       </View>
       <FlatList

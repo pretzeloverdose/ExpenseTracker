@@ -62,21 +62,21 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, forceAuth }) => {
   const handleBiometrics = async () => {
     const { available } = await rnBiometrics.isSensorAvailable();
     if (!available) {
-      Alert.alert('Biometric authentication not available');
+      Alert.alert('Authentication not available');
       return;
     }
     rnBiometrics.simplePrompt({ promptMessage: 'Confirm fingerprint or face' })
       .then(resultObject => {
         const { success } = resultObject;
         if (success) {
-          Alert.alert('Biometric authenticated!');
+          Alert.alert('Authenticated!');
           onAuthSuccess && onAuthSuccess();
         } else {
-          Alert.alert('Biometric authentication cancelled');
+          Alert.alert('Authentication cancelled');
         }
       })
       .catch(() => {
-        Alert.alert('Biometric authentication failed');
+        Alert.alert('Authentication failed');
       });
   };
 
@@ -85,26 +85,32 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, forceAuth }) => {
     if (authType === 'pin') {
       return (
         <View style={globalStyles.container}>
-          <TextInput
-            placeholder="Enter PIN"
-            secureTextEntry
-            value={enteredPin}
-            onChangeText={setEnteredPin}
-            style={{ borderWidth: 1, marginBottom: 8, padding: 8 }}
-            keyboardType="number-pad"
-          />
-          <TouchableOpacity onPress={checkPin}>
-            <Text style={{ color: primaryColor }}>Verify PIN</Text>
-          </TouchableOpacity>
+          <View style={[globalStyles.menuNavigation, { flex: 1, justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ fontSize: 18, marginBottom: 16 }}>Authorisation Required</Text>
+            <TextInput
+              placeholder="Enter PIN"
+              secureTextEntry
+              value={enteredPin}
+              onChangeText={setEnteredPin}
+              style={{ borderWidth: 1, marginBottom: 18, padding: 8 }}
+              keyboardType="number-pad"
+            />
+            <TouchableOpacity onPress={checkPin} style={ globalStyles.menuNavigationBtn }>
+            <Text style={ [ globalStyles.whiteText, { textAlign: 'center'} ]}>Verify PIN</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
     if (authType === 'fingerprint') {
       return (
         <View style={globalStyles.container}>
-          <TouchableOpacity onPress={handleBiometrics} style={{ marginTop: 16 }}>
-            <Text style={{ color: primaryColor }}>Scan Fingerprint/Face</Text>
-          </TouchableOpacity>
+          <View style={[globalStyles.menuNavigation, { flex: 1, justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ fontSize: 18, marginBottom: 16 }}>Authorisation Required</Text>
+            <TouchableOpacity onPress={handleBiometrics} style={ globalStyles.menuNavigationBtn }>
+            <Text style={ [ globalStyles.whiteText, { textAlign: 'center'} ]}>Scan Fingerprint/Face</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -114,16 +120,20 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, forceAuth }) => {
 
   return (
     <View style={globalStyles.container}>
-      <Text style={{ fontSize: 18, marginBottom: 16 }}>Choose Authorisation Method:</Text>
-      <TouchableOpacity onPress={() => handleSetAuthType('none')} style={{ marginBottom: 8 }}>
-        <Text style={{ color: authType === 'none' ? primaryColor : '#000' }}>No Authorisation</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => handleSetAuthType('pin')} style={{ marginBottom: 8 }}>
-        <Text style={{ color: authType === 'pin' ? primaryColor : '#000' }}>PIN Authorisation</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => handleSetAuthType('fingerprint')} style={{ marginBottom: 16 }}>
-        <Text style={{ color: authType === 'fingerprint' ? primaryColor : '#000' }}>Fingerprint/Face Authorisation</Text>
-      </TouchableOpacity>
+      <View style={globalStyles.menuNavigation}>
+        <Text style={{ fontSize: 18, marginBottom: 16 }}>Choose Authorisation Method:</Text>
+        <TouchableOpacity onPress={() => handleSetAuthType('none')} style={ globalStyles.menuNavigationBtn }>
+          <Text style={ [ globalStyles.whiteText, { textAlign: 'center'} ]}>No Authorisation{authType == 'none' ? ' (selected)' : ''}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSetAuthType('pin')} style={ globalStyles.menuNavigationBtn }>
+          <Text style={ [ globalStyles.whiteText, { textAlign: 'center'} ]}>PIN Authorisation{authType == 'pin' ? ' (selected)' : ''}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSetAuthType('fingerprint')} style={ globalStyles.menuNavigationBtn}>
+          <Text style={ [ globalStyles.whiteText, { textAlign: 'center'} ]}>Fingerprint/Face Authorisation{authType == 'fingerprint' ? ' (selected)' : ''}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={globalStyles.menuNavigation}>
 
       {authType === 'pin' && !isPinSet && (
         <>
@@ -132,11 +142,11 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, forceAuth }) => {
             secureTextEntry
             value={pin}
             onChangeText={setPin}
-            style={{ borderWidth: 1, marginBottom: 8, padding: 8 }}
+            style={{ borderWidth: 1, marginBottom: 18, padding: 8 }}
             keyboardType="number-pad"
           />
-          <TouchableOpacity onPress={() => savePin(pin)} style={{ marginBottom: 16 }}>
-            <Text style={{ color: primaryColor }}>Save PIN</Text>
+          <TouchableOpacity onPress={() => savePin(pin)} style={ globalStyles.menuNavigationBtn }>
+          <Text style={ [ globalStyles.whiteText, { textAlign: 'center'} ]}>Save PIN</Text>
           </TouchableOpacity>
         </>
       )}
@@ -148,20 +158,21 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, forceAuth }) => {
             secureTextEntry
             value={enteredPin}
             onChangeText={setEnteredPin}
-            style={{ borderWidth: 1, marginBottom: 8, padding: 8 }}
+            style={{ borderWidth: 1, marginBottom: 18, padding: 8 }}
             keyboardType="number-pad"
           />
-          <TouchableOpacity onPress={checkPin}>
-            <Text style={{ color: primaryColor }}>Verify PIN</Text>
+          <TouchableOpacity onPress={checkPin} style={ globalStyles.menuNavigationBtn }>
+          <Text style={ [ globalStyles.whiteText, { textAlign: 'center'} ]}>Verify PIN</Text>
           </TouchableOpacity>
         </>
       )}
 
       {authType === 'fingerprint' && (
-        <TouchableOpacity onPress={handleBiometrics} style={{ marginTop: 16 }}>
-          <Text style={{ color: primaryColor }}>Scan Fingerprint/Face</Text>
+        <TouchableOpacity onPress={handleBiometrics} style={ globalStyles.menuNavigationBtn }>
+          <Text style={ [ globalStyles.whiteText, { textAlign: 'center'} ]}>Scan Fingerprint/Face</Text>
         </TouchableOpacity>
       )}
+    </View>
     </View>
   );
 };
