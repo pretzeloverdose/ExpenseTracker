@@ -78,6 +78,7 @@ const htmlContent = `
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingBottom: 80
   },
   webview: {
     flex: 1,

@@ -5,7 +5,7 @@ export interface Item {
     day: string;
     time: string;
     color: string;
-    amount: number;
+    amount: string;
     recurring: boolean;
     recurInterval: number;
     recurSetDays: boolean;

@@ -52,7 +52,8 @@ const DayPanel: React.FC<DayPanelProps> = ({ weekData, selectedDateIn, dataIn, o
       return allDays.map((day, index) => {
         const items = data[day] || []; // Use an empty array if no data exists for the day
         const dayTotal = items.reduce((sum, item) => {
-          const signed = item.color === 'red' ? -item.amount : item.amount;
+          let amount = parseFloat(item.amount);
+          const signed = item.color === 'red' ? -amount : amount;
           return sum + signed;
         }, 0);
 
@@ -105,7 +106,7 @@ const DayPanel: React.FC<DayPanelProps> = ({ weekData, selectedDateIn, dataIn, o
                 return (
                   <View key={`${thisDate}-${itemIndex}`} style={{flex: 1, flexDirection: 'row'}}>
                     <Text style={item.color === 'red' ? { color: 'red', fontSize: 12, width: 50, textAlign: 'right' } : { color: 'green', fontSize: 12, width: 50, textAlign: 'right' }}>
-                      {item.amount.toFixed(2)}
+                      {item.amount}
                     </Text>
                     <Text style={{color: '#666', fontSize: 12, width: 10}}> - </Text>
                     <Text style={{color: '#666', fontSize: 12, width: 180}}>{item.time ?? '00:00'} {item.name}{item.recurring && `\n`+'(recurring)'}</Text>

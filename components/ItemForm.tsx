@@ -68,7 +68,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ editItem, defaultDay, onSave, onCan
       day: format(date, 'yyyy-MM-dd'),
       time: timeHour.toString().padStart(2, '0') + ':' + timeMinute.toString().padStart(2, '0'),
       color,
-      amount: parseFloat(amount),
+      amount: amount,
       recurring,
       recurInterval: parseInt(recurInterval),
       recurSetDays,

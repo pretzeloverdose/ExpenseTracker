@@ -35,7 +35,7 @@ export const createGlobalStyles = (primaryColor: string) =>
     },
 
     // WeekCalendar
-    AppWrap: { height: SCREEN_HEIGHT },
+    AppWrap: { height: SCREEN_HEIGHT, paddingBottom: 80 },
     selectedCalStyle: { backgroundColor: primaryColor },
     spaceBEtween: { justifyContent: 'space-between' },
     navigation: {
@@ -93,7 +93,7 @@ export const createGlobalStyles = (primaryColor: string) =>
     dot: { width: 6, height: 6, borderRadius: 3, marginHorizontal: 2 },
 
     // Search
-    container: { flex: 1, padding: 16 },
+    container: { flex: 1, padding: 16, paddingBottom: 80 },
     input: {
       height: 43,
       borderColor: '#ccc',

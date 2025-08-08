@@ -40,7 +40,7 @@ const AddScreen: React.FC<Props > = ({ route }) => {
   const selectedDayString = format(today?.toString(), 'yyyy-MM-dd');
   
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, paddingBottom: 80 }}>
       <ItemForm 
         editItem={undefined} 
         defaultDay={selectedDayString} 
