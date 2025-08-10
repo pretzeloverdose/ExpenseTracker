@@ -70,14 +70,14 @@ function getMonthlyIncomeExpenses(
     let dayRunnningBalance = runningBalance;
     (data[day] || []).forEach(item => {
       if (item.color === 'red') {
-        dayExpense += item.amount;
-        expenses += item.amount;
-        runningBalance -= item.amount;
+        dayExpense += parseFloat(item.amount);
+        expenses += parseFloat(item.amount);
+        runningBalance -= parseFloat(item.amount);
         dayRunnningBalance = runningBalance;
       } else {
-        dayIncome += item.amount;
-        income += item.amount;
-        runningBalance += item.amount;
+        dayIncome += parseFloat(item.amount);
+        income += parseFloat(item.amount);
+        runningBalance += parseFloat(item.amount);
         dayRunnningBalance = runningBalance;
       }
     });
