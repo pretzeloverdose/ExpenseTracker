@@ -88,8 +88,7 @@ function App(): React.JSX.Element {
         // Permission granted, create channel if needed
         await notifee.createChannel({
           id: 'your-channel-id',
-          name: 'Default Channel',
-          importance: AndroidImportance.HIGH,
+          name: 'Default Channel'
         });
       } else {
         // Permission denied
