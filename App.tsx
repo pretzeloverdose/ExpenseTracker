@@ -64,17 +64,23 @@ function App(): React.JSX.Element {
 
   enableScreens();
 
-  const [authRequired, setAuthRequired] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authRequired, setAuthRequired] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const method = await AsyncStorage.getItem('authMethod');
-      if (method === 'pin' || method === 'fingerprint') {
-        setAuthRequired(true);
-      } else {
+    const checkAuthMethod = async () => {
+      try {
+        const method = await AsyncStorage.getItem('authMethod');
+        setAuthRequired(method === 'pin' || method === 'fingerprint');
+      } catch (error) {
+        console.error('Error checking auth method:', error);
         setAuthRequired(false);
+      } finally {
+        setIsLoading(false);
       }
-    })();
+    };
+
+    checkAuthMethod();
   }, []);
 
   const handleAuthSuccess = () => setAuthRequired(false);
@@ -98,11 +104,10 @@ function App(): React.JSX.Element {
     requestNotificationPermission();
   }, []);
 
-  if (authRequired === null) {
-    // Still loading
+  if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" testID="activity-indicator" />
       </View>
     );
   }

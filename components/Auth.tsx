@@ -84,7 +84,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, forceAuth }) => {
   if (forceAuth) {
     if (authType === 'pin') {
       return (
-        <View style={globalStyles.container}>
+        <View testID="auth-modal" style={globalStyles.container}>
           <View style={[globalStyles.menuNavigation, { flex: 1, justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ fontSize: 18, marginBottom: 16 }}>Authorisation Required</Text>
             <TextInput
@@ -104,7 +104,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, forceAuth }) => {
     }
     if (authType === 'fingerprint') {
       return (
-        <View style={globalStyles.container}>
+        <View testID="auth-modal" style={globalStyles.container}>
           <View style={[globalStyles.menuNavigation, { flex: 1, justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ fontSize: 18, marginBottom: 16 }}>Authorisation Required</Text>
             <TouchableOpacity onPress={handleBiometrics} style={ globalStyles.menuNavigationBtn }>
